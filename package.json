@@ -1,0 +1,17 @@
+{
+  "name": "@xsoftwareabdullah1-create/quartz-database",
+  "version": "1.0.0",
+  "private": false,
+  "description": "Additive PostgreSQL schema and migrations for Quartz accounts, profiles, settings, history and file metadata",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "pg": "^8.13.1"
+  },
+  "license": "MIT"
+}
