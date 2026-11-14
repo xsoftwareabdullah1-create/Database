@@ -104,8 +104,14 @@ All protected endpoints require `Authorization: Bearer YOUR_TOKEN`.
 | GET / POST | `/api/projects` | List / create projects |
 | DELETE | `/api/projects/:projectId` | Delete owned project |
 | GET / POST | `/api/projects/:projectId/collections` | List / create collections |
-| GET / POST | `/api/collections/:collectionId/documents` | List / create JSON documents |
-| PUT / DELETE | `/api/documents/:documentId` | Update / delete a document |
+| GET / POST | `/api/collections/:collectionId/documents` | Owner list / create JSON documents |
+| PUT / DELETE | `/api/documents/:documentId` | Owner update / delete a document |
+| GET / POST / DELETE | `/api/projects/:projectId/apps` and `/api/projects/:projectId/apps/:appId` | Register, list and remove apps |
+| GET / POST / DELETE | `/api/projects/:projectId/api-keys` and `/api/projects/:projectId/api-keys/:keyId` | Create, list and revoke API keys |
+| GET | `/api/projects/:projectId/security-rules` | List collection rules |
+| PUT / DELETE | `/api/projects/:projectId/security-rules/:collectionName` | Set / reset collection rules |
+| GET / POST | `/api/client/:projectId/collections/:collectionName/documents` | API-key client read / create (rule required) |
+| PUT / DELETE | `/api/client/:projectId/documents/:documentId` | API-key client update / delete (rule required) |
 | GET | `/api/health` | Service and database health |
 
 Example document payload:
@@ -130,7 +136,13 @@ For production use, configure HTTPS, database backups, email verification, passw
 ```text
 Database/
 ├── public/
-│   └── index.html
+│   ├── index.html
+│   └── console.html
+├── sdk/
+│   ├── webbase.mjs
+│   ├── android/WebbaseClient.kt
+│   └── flutter/lib/webbase_client.dart
+├── scripts/check-client.js
 ├── server.js
 ├── index.js
 ├── schema.sql
