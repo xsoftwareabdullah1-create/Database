@@ -22,4 +22,5 @@ for (const page of pages) {
 }
 const backend = fs.readFileSync('server.js', 'utf8');
 for (const required of ['security_rules', '/api/client/', 'clientKeyAuth']) if (!backend.includes(required)) throw new Error('Missing backend security feature: ' + required);
+if (!backend.includes("replace(/^Bearer\\s+/i,'' )") && !backend.includes("replace(/^Bearer\\s+/i,'')")) throw new Error('Bearer token parsing must accept standard Authorization headers.');
 console.log('Landing page, developer console and backend security checks passed.');
