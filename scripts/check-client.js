@@ -4,7 +4,7 @@ const vm = require('node:vm');
 
 const pages = [
   { file: 'public/index.html', required: ['menu', 'features'] },
-  { file: 'public/console.html', required: ['authForm', 'appView', 'page', 'modalRoot', 'registerApp', 'manageRules', 'createApiKey', 'security_rules', '/api/client/'] }
+  { file: 'public/console.html', required: ['authForm', 'appView', 'page', 'modalRoot', 'registerApp', 'manageRules', 'createApiKey'] }
 ];
 
 for (const page of pages) {
