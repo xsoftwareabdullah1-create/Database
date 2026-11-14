@@ -24,6 +24,8 @@ Webbase is a self-hosted backend starter inspired by the workflow of Firebase. I
 - Email/password account registration and login
 - JWT-based authenticated API requests
 - Private projects scoped to the signed-in account
+- Project app registration for Android, iOS, Flutter and web clients
+- Project API key creation, hashed-at-rest storage, one-time secret display and revocation
 - Collections and JSON document CRUD
 - Responsive dark dashboard for mobile and desktop
 - PostgreSQL JSONB storage and repeatable schema setup
