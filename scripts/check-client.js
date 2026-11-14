@@ -9,7 +9,7 @@ const pages = [
 
 for (const page of pages) {
   const html = fs.readFileSync(page.file, 'utf8');
-  const scripts = [...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/gi)];
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)];
   if (!scripts.length) throw new Error('No client application script found in ' + page.file);
   for (const [index, match] of scripts.entries()) {
     new vm.Script(match[1], { filename: page.file + ':inline-script-' + index });
