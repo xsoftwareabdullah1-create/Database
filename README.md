@@ -29,6 +29,7 @@ Webbase is a self-hosted backend starter inspired by the workflow of Firebase. I
 - Collection-level security rules with deny-by-default client permissions
 - API-key-authenticated client data routes that enforce read/create/update/delete rules
 - Collections and JSON document CRUD
+- JavaScript, Android/Kotlin and Flutter/Dart starter clients for document CRUD
 - Responsive dark dashboard for mobile and desktop
 - PostgreSQL JSONB storage and repeatable schema setup
 - Security headers, request-size limits and authentication rate limiting
@@ -137,6 +138,16 @@ Database/
 ├── package.json
 └── LICENSE
 ```
+
+## Client SDKs
+
+The repository includes lightweight clients for the public document API:
+
+- JavaScript: `sdk/webbase.mjs` — import `createWebbaseClient` and call `client.collection('tasks').list()`, `.create(data)`, `.update(id, data)` or `.delete(id)`.
+- Android/Kotlin: `sdk/android/WebbaseClient.kt` — use `list`, `create`, `update` and `delete` from a background thread. It uses Android's `org.json` classes.
+- Flutter/Dart: `sdk/flutter/lib/webbase_client.dart` — add `http: ^1.2.0` to the app and use the same CRUD methods.
+
+All SDKs need the Webbase base URL, project ID and project API key. They are starter source files, not published Maven, pub.dev or npm packages. Client APIs only provide JSON document CRUD; end-user authentication, file storage, realtime, functions and hosting are not implemented yet.
 
 ## Security rules
 
