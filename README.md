@@ -26,6 +26,8 @@ Webbase is a self-hosted backend starter inspired by the workflow of Firebase. I
 - Private projects scoped to the signed-in account
 - Project app registration for Android, iOS, Flutter and web clients
 - Project API key creation, hashed-at-rest storage, one-time secret display and revocation
+- Collection-level security rules with deny-by-default client permissions
+- API-key-authenticated client data routes that enforce read/create/update/delete rules
 - Collections and JSON document CRUD
 - Responsive dark dashboard for mobile and desktop
 - PostgreSQL JSONB storage and repeatable schema setup
@@ -136,8 +138,12 @@ Database/
 └── LICENSE
 ```
 
+## Security rules
+
+Client API access is denied unless a project owner explicitly enables the relevant operation for a collection. Rules are booleans: `read`, `create`, `update`, and `delete`. For example, send `PUT /api/projects/PROJECT_ID/security-rules/tasks` with an owner session and `{ "rules": { "read": true, "create": true } }` to allow clients to read and create documents in `tasks`; update and delete remain denied. Client requests send the project API key in the `x-webbase-key` header. Treat these as public client keys, not server secrets, and use restrictive rules.
+
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Apache License 2.0 — see [LICENSE](LICENSE).
 
-<p align="center">Built and maintained by <strong>Abdullah</strong><br><sub>Copyright © 2026 Abdullah. All rights reserved except as permitted by the MIT License.</sub></p>
+<p align="center">Built and maintained by <strong>Abdullah</strong><br><sub>Copyright © 2026 Abdullah. Licensed under Apache-2.0.</sub></p>
