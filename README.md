@@ -14,6 +14,11 @@ Webbase is a self-hosted backend starter inspired by the workflow of Firebase. I
 
 **This is an independent project, not an official Firebase product or a drop-in Firebase replacement.**
 
+## Website
+
+- Public landing page: `/`
+- Developer Console: `/console` (sign up, sign in, projects, collections and JSON documents)
+
 ## Features
 
 - Email/password account registration and login
