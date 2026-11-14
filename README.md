@@ -1,186 +1,136 @@
-# ◈ QUARTZ DATABASE
+# Webbase — Backend Platform
+
+<p align="center"><strong>A Firebase-style backend workspace for projects, authentication and JSON document data.</strong><br>Simple console · REST API · PostgreSQL · Self-hostable</p>
 
 <p align="center">
-  <strong>A clean, PostgreSQL-first data layer for the Quartz ecosystem.</strong><br>
-  Additive schema · Repeatable migrations · JSONB settings · User-owned data
+<img src="https://img.shields.io/badge/Node.js-20%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js 20+">
+<img src="https://img.shields.io/badge/PostgreSQL-16%2B-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
+<img src="https://img.shields.io/badge/License-MIT-00A86B?style=for-the-badge" alt="MIT">
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Database-PostgreSQL%2016%2B-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL 16+">
-  <img src="https://img.shields.io/badge/Runtime-Node.js%2020%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js 20+">
-  <img src="https://img.shields.io/badge/License-MIT-00A86B?style=for-the-badge" alt="MIT License">
-</p>
+## Overview
 
----
+Webbase is a self-hosted backend starter inspired by the workflow of Firebase. It provides a browser console and a Node.js REST API backed by PostgreSQL. Create projects, group data into collections, and store JSON documents without writing SQL for everyday CRUD operations.
 
-## ◈ Overview
+**This is an independent project, not an official Firebase product or a drop-in Firebase replacement.**
 
-**Quartz Database** is the schema and migration layer for storing user data alongside the existing Quartz authentication service. It extends the existing account database without trying to replace the authentication system.
+## Features
 
-The repository focuses on four things: profiles, application settings, activity history, and file metadata. It is designed to be understandable, repeatable, and safe to integrate into an existing Node.js service.
+- Email/password account registration and login
+- JWT-based authenticated API requests
+- Private projects scoped to the signed-in account
+- Collections and JSON document CRUD
+- Responsive dark dashboard for mobile and desktop
+- PostgreSQL JSONB storage and repeatable schema setup
+- Security headers, request-size limits and authentication rate limiting
+- REST API health endpoint and built-in endpoint guide
 
-> **Design principle:** authentication stays with the Quartz auth service; this repository owns the additive user-data schema.
-
-## ✦ Features
-
-- **PostgreSQL-first** — built for PostgreSQL 16 and newer.
-- **Additive migrations** — creates the Quartz data tables without dropping or renaming existing tables.
-- **Repeatable setup** — uses `IF NOT EXISTS` for tables and indexes.
-- **Structured settings** — stores flexible per-user preferences in PostgreSQL `JSONB`.
-- **Activity history** — indexed by user and creation time for efficient recent-history queries.
-- **File metadata** — stores file details and a storage key, while file bytes live in separate persistent storage.
-- **Node.js integration** — exposes a small migration helper that accepts an existing `pg` Pool or compatible client.
-
-## ◈ Architecture
+## Architecture
 
 ```text
-Quartz Application
-       │
-       ▼
-Quartz Auth Service
-       │  Existing connection / authenticated user
-       ▼
+Browser Console
+      │ same-origin JSON requests
+      ▼
+Express REST API ── JWT authentication
+      │
+      ▼
 PostgreSQL
-       ├── quartz_users       Existing auth-owned table
-       ├── quartz_sessions    Existing auth-owned table
-       ├── quartz_profiles    User profile data
-       ├── quartz_settings    User preferences (JSONB)
-       ├── quartz_history     Activity records
-       └── quartz_files       File metadata
+  ├── app_users
+  ├── projects
+  ├── collections
+  └── documents (JSONB)
 ```
 
-The authentication service remains responsible for sessions and API authorization. This repository does not expose a public database endpoint or implement authentication.
+## Requirements
 
-## ◈ Schema
-
-| Table | Purpose | Important fields |
-| --- | --- | --- |
-| `quartz_profiles` | One profile per user | `user_id`, `display_name`, `bio`, `avatar_url`, `timezone` |
-| `quartz_settings` | Per-user application settings | `user_id`, `settings JSONB` |
-| `quartz_history` | User activity/history | `id`, `user_id`, `kind`, `title`, `metadata`, `created_at` |
-| `quartz_files` | Uploaded-file metadata | `id`, `user_id`, `name`, `mime_type`, `size_bytes`, `storage_key` |
-
-All four tables reference the existing `quartz_users(id)` key. User-owned rows are removed when their referenced user is deleted.
-
-### File storage boundary
-
-The `quartz_files` table stores metadata only. It does **not** store uploaded file bytes. Keep actual files in a persistent volume or object-storage service, and authorize every upload and download in the application layer.
-
-The database constraint currently limits an individual file record to **10 MiB**. Enforce total per-user quotas in the upload service as well.
-
-## ⚡ Quick start
-
-### Requirements
-
-- PostgreSQL 16+
 - Node.js 20+
-- An existing Quartz auth schema containing `quartz_users(id)` with a BIGINT-compatible key
-- The `pg` package in the host application
+- PostgreSQL 14+ (PostgreSQL 16+ recommended)
+- npm
 
-### 1. Install the PostgreSQL driver
+## Run locally
 
-In the Quartz service:
+1. Clone the repository and install dependencies:
 
-```bash
-npm install pg
-```
+   ```bash
+   npm install
+   ```
 
-### 2. Configure the database connection
+2. Create a PostgreSQL database named `webbase`.
 
-Set `DATABASE_URL` in your deployment environment. Never commit a real connection string or password.
+3. Copy `.env.example` to `.env` and set `DATABASE_URL` plus a random `JWT_SECRET` (at least 32 characters).
 
-### 3. Apply the SQL migration
+4. Start the application:
 
-Back up the database first, then run:
+   ```bash
+   npm start
+   ```
 
-```bash
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/001_user_data.sql
-```
+5. Open `http://localhost:3000`, create an account and create your first project.
 
-### 4. Or use the Node.js migration helper
+The server creates the required tables automatically on startup. You can also review and run `schema.sql` manually.
 
-```js
-const { Pool } = require('pg');
-const { migrate } = require('./index');
+## Environment variables
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: true }
-    : false
-});
+| Variable | Required | Description |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `JWT_SECRET` | Yes | Random secret, minimum 32 characters |
+| `PORT` | No | HTTP port (default 3000) |
+| `NODE_ENV` | No | Set to `production` when deployed |
+| `PGSSL` | No | Set `true` if your database provider requires verified TLS |
 
-async function setupDatabase() {
-  try {
-    const result = await migrate(pool);
-    console.log('Quartz database migration:', result);
-  } finally {
-    await pool.end();
+Never commit `.env` or expose database credentials in browser code.
+
+## API
+
+All protected endpoints require `Authorization: Bearer YOUR_TOKEN`.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/api/auth/register` | Create an account |
+| POST | `/api/auth/login` | Sign in |
+| GET | `/api/me` | Current account |
+| GET / POST | `/api/projects` | List / create projects |
+| DELETE | `/api/projects/:projectId` | Delete owned project |
+| GET / POST | `/api/projects/:projectId/collections` | List / create collections |
+| GET / POST | `/api/collections/:collectionId/documents` | List / create JSON documents |
+| PUT / DELETE | `/api/documents/:documentId` | Update / delete a document |
+| GET | `/api/health` | Service and database health |
+
+Example document payload:
+
+```json
+{
+  "data": {
+    "displayName": "Ada Lovelace",
+    "active": true
   }
 }
-
-setupDatabase().catch((error) => {
-  console.error('Database migration failed:', error);
-  process.exitCode = 1;
-});
 ```
 
-Use the SSL settings required by your database provider. Do not disable certificate verification in production.
+## Deployment
 
-## ◈ Repository map
+Deploy the Node.js service to a host that supports persistent environment variables and connect it to a managed PostgreSQL instance. Set `DATABASE_URL`, a strong `JWT_SECRET`, `NODE_ENV=production`, and `PGSSL=true` when required by your provider. Serve the dashboard and API from the same origin or configure a deliberate CORS policy before splitting them.
+
+For production use, configure HTTPS, database backups, email verification, password reset, audit logging and monitoring. Do not treat this starter as a fully managed cloud database service.
+
+## Project structure
 
 ```text
 Database/
-├── docs/
-│   └── SELF_HOSTING.md
-├── migrations/
-│   └── 001_user_data.sql
+├── public/
+│   └── index.html
+├── server.js
 ├── index.js
+├── schema.sql
+├── .env.example
+├── .gitignore
 ├── package.json
-├── LICENSE
-└── README.md
+└── LICENSE
 ```
 
-## 🔐 Security
+## License
 
-- Keep database URLs, passwords, session secrets, and API keys out of Git.
-- Use environment variables or your hosting provider's secret manager.
-- Keep PostgreSQL private; do not expose its port to the public internet.
-- Authenticate users in the Quartz service and authorize every data operation by the authenticated user ID.
-- Validate file names, MIME types, file sizes, and storage keys in the application.
-- Use encrypted backups stored separately from the database host.
-- Apply least-privilege database credentials to the running service.
+MIT — see [LICENSE](LICENSE).
 
-## ♻️ Backups, restore & self-hosting
-
-Read **[docs/SELF_HOSTING.md](docs/SELF_HOSTING.md)** for backup and restore commands, deployment notes, migration prerequisites, and rollback guidance.
-
-A backup is not verified until it has been successfully restored and checked. Do not treat an expiring free database instance as permanent production storage.
-
-## ⚠️ Important notes
-
-- This repository is a **database schema and migration package**, not a hosted database service.
-- It does not create the original `quartz_users` or session tables.
-- Apply the migration only after confirming the existing auth table and key type.
-- The SQL migration is wrapped in a transaction and is safe to re-run for the objects it manages.
-- Review migrations and take a backup before applying them to production.
-- The Node helper expects the host service's existing PostgreSQL schema and connection.
-
-## ✦ Roadmap
-
-- [ ] Add automated PostgreSQL migration tests
-- [ ] Add schema version tracking
-- [ ] Add typed query helpers
-- [ ] Add configurable history-retention tooling
-- [ ] Add integration examples for the Quartz service
-
-## 📄 License
-
-Released under the **MIT License**. See [LICENSE](LICENSE).
-
----
-
-<p align="center">
-  Built and maintained by <strong>Abdullah</strong><br>
-  <sub>Copyright © 2026 Abdullah. All rights reserved except as permitted by the MIT License.</sub>
-</p>
+<p align="center">Built and maintained by <strong>Abdullah</strong><br><sub>Copyright © 2026 Abdullah. All rights reserved except as permitted by the MIT License.</sub></p>
