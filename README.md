@@ -1,11 +1,11 @@
 # Webbase — Backend Platform
 
-<p align="center"><strong>A Firebase-style backend workspace for projects, authentication and JSON document data.</strong><br>Simple console · REST API · PostgreSQL · Self-hostable</p>
+<p align="center"><strong>A Firebase-style backend workspace for projects, authentication and JSON document data.</strong><br>Simple console · REST API · PostgreSQL · Self-hostable · Apache-2.0</p>
 
 <p align="center">
 <img src="https://img.shields.io/badge/Node.js-20%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js 20+">
 <img src="https://img.shields.io/badge/PostgreSQL-16%2B-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
-<img src="https://img.shields.io/badge/License-MIT-00A86B?style=for-the-badge" alt="MIT">
+<img src="https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge" alt="MIT">
 </p>
 
 ## Overview
