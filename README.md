@@ -32,7 +32,7 @@ Webbase is a self-hosted backend starter inspired by the workflow of Firebase. I
 - JavaScript, Android/Kotlin and Flutter/Dart starter clients for document CRUD
 - Responsive dark dashboard for mobile and desktop
 - PostgreSQL JSONB storage and repeatable schema setup
-- Security headers, request-size limits and authentication rate limiting
+- Security headers, request-size limits, authentication/client API rate limits and configurable CORS allowlist
 - REST API health endpoint and built-in endpoint guide
 
 ## Architecture
@@ -88,6 +88,7 @@ The server creates the required tables automatically on startup. You can also re
 | `PORT` | No | HTTP port (default 3000) |
 | `NODE_ENV` | No | Set to `production` when deployed |
 | `PGSSL` | No | Set `true` if your database provider requires verified TLS |
+| `WEBBASE_CORS_ORIGINS` | No | Comma-separated allowlist of browser origins that may call the API |
 
 Never commit `.env` or expose database credentials in browser code.
 
