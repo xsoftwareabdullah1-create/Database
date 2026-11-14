@@ -1,16 +1,22 @@
 {
-  "name": "@xsoftwareabdullah1-create/quartz-database",
+  "name": "webbase-platform",
   "version": "1.0.0",
   "private": false,
-  "description": "Additive PostgreSQL schema and migrations for Quartz accounts, profiles, settings, history and file metadata",
-  "main": "index.js",
-  "exports": {
-    ".": "./index.js"
+  "description": "A Firebase-style backend platform with a web console, authentication and JSON document database.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check index.js"
   },
-  "engines": {
-    "node": ">=20"
-  },
-  "peerDependencies": {
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.1"
   },
   "license": "MIT"
