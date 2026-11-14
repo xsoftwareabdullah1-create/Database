@@ -64,6 +64,15 @@ async function migrate() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS security_rules (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      collection_name VARCHAR(64) NOT NULL,
+      rules JSONB NOT NULL DEFAULT '{"read":false,"create":false,"update":false,"delete":false}'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(project_id, collection_name)
+    );
+    CREATE INDEX IF NOT EXISTS security_rules_project_idx ON security_rules(project_id);
     CREATE TABLE IF NOT EXISTS project_apps (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -224,6 +233,54 @@ app.delete('/api/projects/:projectId/api-keys/:keyId',auth,asyncRoute(async(req,
   res.json({ok:true});
 }));
 
+const ruleActions = ['read','create','update','delete'];
+function validRules(value) { return !!value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every(k => ruleActions.includes(k)) && ruleActions.every(k => value[k] === undefined || typeof value[k] === 'boolean'); }
+app.get('/api/projects/:projectId/security-rules',auth,asyncRoute(async(req,res)=>{
+  if(!await ownsProject(req.user.id,req.params.projectId)) return res.status(404).json({error:'Project not found'});
+  const r=await pool.query('SELECT collection_name,rules,updated_at FROM security_rules WHERE project_id=$1 ORDER BY collection_name',[req.params.projectId]); res.json({rules:r.rows});
+}));
+app.put('/api/projects/:projectId/security-rules/:collectionName',auth,asyncRoute(async(req,res)=>{
+  if(!await ownsProject(req.user.id,req.params.projectId)) return res.status(404).json({error:'Project not found'});
+  const name=clean(req.params.collectionName), rules=req.body.rules;
+  if(!validName(name)) return res.status(400).json({error:'Invalid collection name'});
+  if(!validRules(rules)) return res.status(400).json({error:'Rules must contain only boolean read, create, update and delete permissions'});
+  const normalized=Object.fromEntries(ruleActions.map(k=>[k,rules[k]===true]));
+  const sql='INSERT INTO security_rules(project_id,collection_name,rules) VALUES($1,$2,$3) ON CONFLICT(project_id,collection_name) DO UPDATE SET rules=EXCLUDED.rules,updated_at=NOW() RETURNING collection_name,rules,updated_at';
+  const r=await pool.query(sql,[req.params.projectId,name,JSON.stringify(normalized)]); res.json({rule:r.rows[0]});
+}));
+app.delete('/api/projects/:projectId/security-rules/:collectionName',auth,asyncRoute(async(req,res)=>{
+  if(!await ownsProject(req.user.id,req.params.projectId)) return res.status(404).json({error:'Project not found'});
+  await pool.query('DELETE FROM security_rules WHERE project_id=$1 AND collection_name=$2',[req.params.projectId,req.params.collectionName]); res.json({ok:true,defaultPolicy:'deny'});
+}));
+const clientKeyAuth=asyncRoute(async(req,res,next)=>{
+  const secret=clean(req.get('x-webbase-key'));
+  if(!/^wb_live_[A-Za-z0-9_-]{30,}$/.test(secret)) return res.status(401).json({error:'A valid x-webbase-key header is required'});
+  const hash=crypto.createHash('sha256').update(secret).digest('hex');
+  const r=await pool.query('SELECT id,project_id FROM project_api_keys WHERE key_hash=$1 AND project_id=$2 AND revoked_at IS NULL',[hash,req.params.projectId]);
+  if(!r.rowCount) return res.status(401).json({error:'Invalid or revoked project API key'});
+  req.clientKey=r.rows[0]; await pool.query('UPDATE project_api_keys SET last_used_at=NOW() WHERE id=$1',[req.clientKey.id]); next();
+});
+async function clientPermission(projectId,name,action){ const r=await pool.query('SELECT rules FROM security_rules WHERE project_id=$1 AND collection_name=$2',[projectId,name]); return !!(r.rowCount && r.rows[0].rules && r.rows[0].rules[action]===true); }
+function validDocument(data){ return !!data && typeof data==='object' && !Array.isArray(data); }
+app.get('/api/client/:projectId/collections/:collectionName/documents',clientKeyAuth,asyncRoute(async(req,res)=>{
+  const name=clean(req.params.collectionName); if(!validName(name)||!await clientPermission(req.params.projectId,name,'read')) return res.status(403).json({error:'Read access denied by security rules'});
+  const r=await pool.query('SELECT d.id,d.data,d.created_at,d.updated_at FROM documents d JOIN collections c ON c.id=d.collection_id WHERE c.project_id=$1 AND c.name=$2 ORDER BY d.updated_at DESC LIMIT 100',[req.params.projectId,name]); res.json({documents:r.rows});
+}));
+app.post('/api/client/:projectId/collections/:collectionName/documents',clientKeyAuth,asyncRoute(async(req,res)=>{
+  const name=clean(req.params.collectionName); if(!validName(name)||!await clientPermission(req.params.projectId,name,'create')) return res.status(403).json({error:'Create access denied by security rules'});
+  if(!validDocument(req.body.data)) return res.status(400).json({error:'Document data must be a JSON object'});
+  const r=await pool.query('INSERT INTO documents(collection_id,data) SELECT id,$1 FROM collections WHERE project_id=$2 AND name=$3 RETURNING *',[JSON.stringify(req.body.data),req.params.projectId,name]);
+  if(!r.rowCount) return res.status(404).json({error:'Collection not found'}); res.status(201).json({document:r.rows[0]});
+}));
+app.put('/api/client/:projectId/documents/:documentId',clientKeyAuth,asyncRoute(async(req,res)=>{
+  if(!validDocument(req.body.data)) return res.status(400).json({error:'Document data must be a JSON object'});
+  const sql="UPDATE documents d SET data=$1,updated_at=NOW() FROM collections c,security_rules s WHERE d.id=$2 AND c.id=d.collection_id AND c.project_id=$3 AND s.project_id=c.project_id AND s.collection_name=c.name AND s.rules->>'update'='true' RETURNING d.*";
+  const r=await pool.query(sql,[JSON.stringify(req.body.data),req.params.documentId,req.params.projectId]); if(!r.rowCount) return res.status(403).json({error:'Update access denied or document not found'}); res.json({document:r.rows[0]});
+}));
+app.delete('/api/client/:projectId/documents/:documentId',clientKeyAuth,asyncRoute(async(req,res)=>{
+  const sql="DELETE FROM documents d USING collections c,security_rules s WHERE d.id=$1 AND c.id=d.collection_id AND c.project_id=$2 AND s.project_id=c.project_id AND s.collection_name=c.name AND s.rules->>'delete'='true' RETURNING d.id";
+  const r=await pool.query(sql,[req.params.documentId,req.params.projectId]); if(!r.rowCount) return res.status(403).json({error:'Delete access denied or document not found'}); res.json({ok:true});
+}));
 app.use('/api',(_req,res)=>res.status(404).json({error:'API route not found'}));
 app.use((err,_req,res,_next)=>{
   console.error(err);
