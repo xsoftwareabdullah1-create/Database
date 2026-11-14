@@ -28,6 +28,15 @@ CREATE TABLE IF NOT EXISTS documents (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS security_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  collection_name VARCHAR(64) NOT NULL,
+  rules JSONB NOT NULL DEFAULT '{"read":false,"create":false,"update":false,"delete":false}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(project_id, collection_name)
+);
+CREATE INDEX IF NOT EXISTS security_rules_project_idx ON security_rules(project_id);
 CREATE TABLE IF NOT EXISTS project_apps (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
