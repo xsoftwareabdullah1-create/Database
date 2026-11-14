@@ -13,8 +13,6 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const JWT_SECRET = process.env.JWT_SECRET;
 const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) throw new Error('DATABASE_URL is required. Copy .env.example to .env and configure PostgreSQL.');
-if (!JWT_SECRET || JWT_SECRET.length < 32) throw new Error('JWT_SECRET must be at least 32 characters.');
 
 const pool = new Pool({
   connectionString: DATABASE_URL,
@@ -35,6 +33,8 @@ app.use('/api/auth', rateLimit({ windowMs: 15*60*1000, limit: 30, standardHeader
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 async function migrate() {
+  if (!DATABASE_URL) throw new Error('DATABASE_URL is required. Copy .env.example to .env and configure PostgreSQL.');
+  if (!JWT_SECRET || JWT_SECRET.length < 32) throw new Error('JWT_SECRET must be at least 32 characters.');
   await pool.query(`
     CREATE TABLE IF NOT EXISTS app_users (
       id BIGSERIAL PRIMARY KEY,
