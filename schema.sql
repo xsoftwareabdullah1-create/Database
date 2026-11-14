@@ -27,6 +27,28 @@ CREATE TABLE IF NOT EXISTS documents (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS project_apps (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  name VARCHAR(80) NOT NULL,
+  platform VARCHAR(16) NOT NULL CHECK (platform IN ('web','android','ios','flutter')),
+  app_identifier VARCHAR(180) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(project_id, platform, app_identifier)
+);
+CREATE TABLE IF NOT EXISTS project_api_keys (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  name VARCHAR(80) NOT NULL,
+  key_prefix VARCHAR(32) NOT NULL,
+  key_hash CHAR(64) NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_used_at TIMESTAMPTZ,
+  revoked_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS project_apps_project_idx ON project_apps(project_id);
+CREATE INDEX IF NOT EXISTS project_api_keys_project_idx ON project_api_keys(project_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS projects_owner_idx ON projects(owner_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS collections_project_idx ON collections(project_id);
 CREATE INDEX IF NOT EXISTS documents_collection_idx ON documents(collection_id, updated_at DESC);
