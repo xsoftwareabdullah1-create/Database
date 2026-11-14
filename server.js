@@ -29,6 +29,15 @@ const sign = user => jwt.sign({ sub: String(user.id), email: user.email }, JWT_S
 app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc:["'self'"], styleSrc:["'self'","'unsafe-inline'","https://fonts.googleapis.com"], fontSrc:["'self'","https://fonts.gstatic.com"], scriptSrc:["'self'","'unsafe-inline'"], imgSrc:["'self'","data:"] } } }));
 app.use(express.json({ limit: '256kb' }));
+const allowedOrigins = new Set((process.env.WEBBASE_CORS_ORIGINS || '').split(',').map(v => v.trim()).filter(Boolean));
+app.use((req,res,next)=>{
+ const origin=req.get('origin');
+ if(origin && allowedOrigins.has(origin)){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Access-Control-Allow-Headers','Content-Type, Authorization, x-webbase-key');res.setHeader('Access-Control-Allow-Methods','GET, POST, PUT, DELETE, OPTIONS');}
+ if(req.method==='OPTIONS') return res.sendStatus(origin && allowedOrigins.has(origin) ? 204 : 403);
+ next();
+});
+app.use('/api/client',rateLimit({windowMs:60*1000,limit:120,standardHeaders:'draft-7',legacyHeaders:false}));
+
 app.use('/api/auth', rateLimit({ windowMs: 15*60*1000, limit: 30, standardHeaders: 'draft-7', legacyHeaders: false }));
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
