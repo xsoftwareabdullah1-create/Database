@@ -63,6 +63,28 @@ async function migrate() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS project_apps (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      name VARCHAR(80) NOT NULL,
+      platform VARCHAR(16) NOT NULL CHECK (platform IN ('web','android','ios','flutter')),
+      app_identifier VARCHAR(180) NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(project_id, platform, app_identifier)
+    );
+    CREATE TABLE IF NOT EXISTS project_api_keys (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      name VARCHAR(80) NOT NULL,
+      key_prefix VARCHAR(32) NOT NULL,
+      key_hash CHAR(64) NOT NULL UNIQUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_used_at TIMESTAMPTZ,
+      revoked_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS project_apps_project_idx ON project_apps(project_id);
+    CREATE INDEX IF NOT EXISTS project_api_keys_project_idx ON project_api_keys(project_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS projects_owner_idx ON projects(owner_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS collections_project_idx ON collections(project_id);
     CREATE INDEX IF NOT EXISTS documents_collection_idx ON documents(collection_id, updated_at DESC);
@@ -159,6 +181,49 @@ app.delete('/api/documents/:documentId',auth,asyncRoute(async(req,res)=>{
   if(!r.rowCount) return res.status(404).json({error:'Document not found'});
   res.json({ok:true});
 }));
+
+app.get('/api/projects/:projectId/apps',auth,asyncRoute(async(req,res)=>{
+  if(!await ownsProject(req.user.id,req.params.projectId)) return res.status(404).json({error:'Project not found'});
+  const r=await pool.query('SELECT id,name,platform,app_identifier,created_at FROM project_apps WHERE project_id=$1 ORDER BY created_at DESC',[req.params.projectId]);
+  res.json({apps:r.rows});
+}));
+app.post('/api/projects/:projectId/apps',auth,asyncRoute(async(req,res)=>{
+  if(!await ownsProject(req.user.id,req.params.projectId)) return res.status(404).json({error:'Project not found'});
+  const name=clean(req.body.name),platform=clean(req.body.platform).toLowerCase(),identifier=clean(req.body.appIdentifier);
+  if(name.length<2||name.length>80) return res.status(400).json({error:'App name must be 2–80 characters'});
+  if(!['web','android','ios','flutter'].includes(platform)) return res.status(400).json({error:'Platform must be web, android, ios or flutter'});
+  if(identifier.length<3||identifier.length>180||/[\\s<>]/.test(identifier)) return res.status(400).json({error:'Enter a valid package name, bundle ID or web app identifier'});
+  try {
+    const r=await pool.query('INSERT INTO project_apps(project_id,name,platform,app_identifier) VALUES($1,$2,$3,$4) RETURNING id,name,platform,app_identifier,created_at',[req.params.projectId,name,platform,identifier]);
+    res.status(201).json({app:r.rows[0]});
+  } catch(e){if(e.code==='23505') return res.status(409).json({error:'This app identifier is already registered in this project'});throw e;}
+}));
+app.delete('/api/projects/:projectId/apps/:appId',auth,asyncRoute(async(req,res)=>{
+  const r=await pool.query('DELETE FROM project_apps a USING projects p WHERE a.id=$1 AND a.project_id=p.id AND p.id=$2 AND p.owner_id=$3 RETURNING a.id',[req.params.appId,req.params.projectId,req.user.id]);
+  if(!r.rowCount) return res.status(404).json({error:'App registration not found'});
+  res.json({ok:true});
+}));
+app.get('/api/projects/:projectId/api-keys',auth,asyncRoute(async(req,res)=>{
+  if(!await ownsProject(req.user.id,req.params.projectId)) return res.status(404).json({error:'Project not found'});
+  const r=await pool.query('SELECT id,name,key_prefix,created_at,last_used_at,revoked_at FROM project_api_keys WHERE project_id=$1 ORDER BY created_at DESC',[req.params.projectId]);
+  res.json({keys:r.rows});
+}));
+app.post('/api/projects/:projectId/api-keys',auth,asyncRoute(async(req,res)=>{
+  if(!await ownsProject(req.user.id,req.params.projectId)) return res.status(404).json({error:'Project not found'});
+  const name=clean(req.body.name);
+  if(name.length<2||name.length>80) return res.status(400).json({error:'API key name must be 2–80 characters'});
+  const secret='wb_live_'+crypto.randomBytes(32).toString('base64url');
+  const prefix=secret.slice(0,16);
+  const hash=crypto.createHash('sha256').update(secret).digest('hex');
+  const r=await pool.query('INSERT INTO project_api_keys(project_id,name,key_prefix,key_hash) VALUES($1,$2,$3,$4) RETURNING id,name,key_prefix,created_at',[req.params.projectId,name,prefix,hash]);
+  res.status(201).json({key:r.rows[0],secret});
+}));
+app.delete('/api/projects/:projectId/api-keys/:keyId',auth,asyncRoute(async(req,res)=>{
+  const r=await pool.query('UPDATE project_api_keys k SET revoked_at=NOW() FROM projects p WHERE k.id=$1 AND k.project_id=p.id AND p.id=$2 AND p.owner_id=$3 AND k.revoked_at IS NULL RETURNING k.id',[req.params.keyId,req.params.projectId,req.user.id]);
+  if(!r.rowCount) return res.status(404).json({error:'Active API key not found'});
+  res.json({ok:true});
+}));
+
 app.use('/api',(_req,res)=>res.status(404).json({error:'API route not found'}));
 app.use((err,_req,res,_next)=>{
   console.error(err);
