@@ -68,16 +68,17 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS documents_collection_idx ON documents(collection_id, updated_at DESC);
   `);
 }
-async function auth(req,res,next) {
-  const token = (req.headers.authorization || '').replace(/^Bearer\s+/i,'');
+const auth = asyncRoute(async (req,res,next) => {
+  const token = (req.headers.authorization || '').replace(/^Bearer\\s+/i,'');
   if (!token) return res.status(401).json({ error:'Authentication required' });
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    const result = await pool.query('SELECT id,email FROM app_users WHERE id=$1', [payload.sub]);
-    if (!result.rowCount) return res.status(401).json({ error:'Account not found' });
-    req.user = result.rows[0]; next();
-  } catch (_) { return res.status(401).json({ error:'Invalid or expired session' }); }
-}
+  let payload;
+  try { payload = jwt.verify(token, JWT_SECRET); }
+  catch (_) { return res.status(401).json({ error:'Invalid or expired session' }); }
+  const result = await pool.query('SELECT id,email FROM app_users WHERE id=$1', [payload.sub]);
+  if (!result.rowCount) return res.status(401).json({ error:'Account not found' });
+  req.user = result.rows[0];
+  next();
+});
 async function ownsProject(userId, projectId) {
   const r = await pool.query('SELECT id,name,region,created_at FROM projects WHERE id=$1 AND owner_id=$2',[projectId,userId]);
   return r.rows[0] || null;
