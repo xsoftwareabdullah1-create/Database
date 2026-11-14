@@ -4,7 +4,7 @@ const vm = require('node:vm');
 
 const pages = [
   { file: 'public/index.html', required: ['menu', 'features'] },
-  { file: 'public/console.html', required: ['authForm', 'appView', 'page', 'modalRoot', 'registerApp', 'createApiKey', 'security_rules', '/api/client/'] }
+  { file: 'public/console.html', required: ['authForm', 'appView', 'page', 'modalRoot', 'registerApp', 'manageRules', 'createApiKey', 'security_rules', '/api/client/'] }
 ];
 
 for (const page of pages) {
@@ -20,4 +20,6 @@ for (const page of pages) {
     }
   }
 }
-console.log('Landing page and developer console JavaScript syntax and UI checks passed.');
+const backend = fs.readFileSync('server.js', 'utf8');
+for (const required of ['security_rules', '/api/client/', 'clientKeyAuth']) if (!backend.includes(required)) throw new Error('Missing backend security feature: ' + required);
+console.log('Landing page, developer console and backend security checks passed.');
