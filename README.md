@@ -187,3 +187,13 @@ Client API access is denied unless a project owner explicitly enables the releva
 Apache License 2.0 — see [LICENSE](LICENSE).
 
 <p align="center">Built and maintained by <strong>Abdullah</strong><br><sub>Copyright © 2026 Abdullah. Licensed under Apache-2.0.</sub></p>
+
+
+## GitHub Pages preview
+
+The static website preview is published with GitHub Pages from `public/`. Once the Pages workflow completes, open:
+
+- https://xsoftwareabdullah1-create.github.io/Database/
+- Console UI preview: https://xsoftwareabdullah1-create.github.io/Database/console.html
+
+**Important:** GitHub Pages only serves static files. Authentication, project creation, API requests and PostgreSQL-backed data require the Render backend described above. The console preview includes a notice about this limitation.
