@@ -32,7 +32,8 @@ for (const required of [
   'property: connectionString',
   'key: JWT_SECRET',
   'generateValue: true',
-  'type: pserv',
+  'databases:',
+  'name: webbase-db',
   'plan: free'
 ]) {
   if (!blueprint.includes(required)) throw new Error('Missing Render deployment configuration: ' + required);
