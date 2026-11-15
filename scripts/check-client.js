@@ -20,7 +20,25 @@ for (const page of pages) {
     }
   }
 }
+const blueprint = fs.readFileSync('render.yaml', 'utf8');
+for (const required of [
+  'type: web',
+  'runtime: node',
+  'buildCommand: npm install --omit=dev --no-audit --no-fund && npm run check',
+  'startCommand: npm start',
+  'healthCheckPath: /api/health',
+  'key: DATABASE_URL',
+  'fromDatabase:',
+  'property: connectionString',
+  'key: JWT_SECRET',
+  'generateValue: true',
+  'type: pserv',
+  'plan: free'
+]) {
+  if (!blueprint.includes(required)) throw new Error('Missing Render deployment configuration: ' + required);
+}
+if (!fs.existsSync('LICENSE')) throw new Error('Apache-2.0 LICENSE file is missing.');
 const backend = fs.readFileSync('server.js', 'utf8');
 for (const required of ['security_rules', '/api/client/', 'clientKeyAuth']) if (!backend.includes(required)) throw new Error('Missing backend security feature: ' + required);
 if (!backend.includes("replace(/^Bearer\\s+/i,'' )") && !backend.includes("replace(/^Bearer\\s+/i,'')")) throw new Error('Bearer token parsing must accept standard Authorization headers.');
-console.log('Landing page, developer console and backend security checks passed.');
+console.log('Landing page, developer console, backend security and Render deployment checks passed.');
