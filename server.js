@@ -109,7 +109,7 @@ async function migrate() {
   `);
 }
 const auth = asyncRoute(async (req,res,next) => {
-  const token = (req.headers.authorization || '').replace(/^Bearer\\s+/i,'');
+  const token = (req.headers.authorization || '').replace(/^Bearer\s+/i,'');
   if (!token) return res.status(401).json({ error:'Authentication required' });
   let payload;
   try { payload = jwt.verify(token, JWT_SECRET); }

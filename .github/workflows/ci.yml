@@ -1,17 +1,27 @@
 name: Webbase CI
+
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
-    branches: [main]
+    branches: ["**"]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
-  verify:
+  validate:
+    name: Validate Node.js application
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install --no-audit --no-fund
-      - run: npm run check
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check JavaScript syntax and client safeguards
+        run: npm run check
