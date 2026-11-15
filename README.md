@@ -127,7 +127,23 @@ Example document payload:
 
 ## Deployment
 
-Deploy the Node.js service to a host that supports persistent environment variables and connect it to a managed PostgreSQL instance. Set `DATABASE_URL`, a strong `JWT_SECRET`, `NODE_ENV=production`, and `PGSSL=true` when required by your provider. Serve the dashboard and API from the same origin or configure a deliberate CORS policy before splitting them.
+The application serves the landing page, developer console and REST API from one Express origin. This avoids browser CORS configuration for the built-in console. Set `DATABASE_URL`, a strong `JWT_SECRET`, `NODE_ENV=production`, and `PGSSL=true` only when your PostgreSQL provider requires verified TLS. Never expose database credentials or the JWT secret in browser code.
+
+## One-click public deployment (Render)
+
+Webbase includes a Render Blueprint at [render.yaml](render.yaml) that provisions the Node.js web service and a PostgreSQL database, generates a private `JWT_SECRET`, runs the project checks during the build, and configures `/api/health` as the service health check.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/xsoftwareabdullah1-create/Database)
+
+1. Open the Deploy to Render link and sign in to Render.
+2. Review the Blueprint resources and approve creation of the Webbase service and PostgreSQL database.
+3. Wait for the first build and deployment to finish. Render will assign a public HTTPS `.onrender.com` URL.
+4. Open that URL, create an account, then open `/api/health`. A healthy response reports both the service and database as connected.
+
+The Blueprint currently uses Render's free plans to avoid committing you to a paid service. **Free Render web services sleep after inactivity, and free PostgreSQL databases expire after 30 days (1 GB limit). They are for testing/hobby use, not production or long-term storage.** Upgrade the database before storing important data, and configure backups before production use. See [Render's free-instance limits](https://render.com/docs/free).
+
+The repository itself is already public on GitHub. The hosted application becomes public only after you approve the Render Blueprint and its deployment succeeds. No database password or JWT secret is committed to this repository; Render generates the JWT secret and wires the database connection privately.
+
 
 For production use, configure HTTPS, database backups, email verification, password reset, audit logging and monitoring. Do not treat this starter as a fully managed cloud database service.
 
